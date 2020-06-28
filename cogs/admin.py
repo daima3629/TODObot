@@ -30,42 +30,66 @@ class AdminCog(commands.Cog):
         return content.strip('` \n')
 
     async def do_eval(self, ctx, body):
-        env = {
-            'bot': self.bot,
-            'ctx': ctx,
-            'channel': ctx.channel,
-            'author': ctx.author,
-            'guild': ctx.guild,
-            'message': ctx.message
-        }
-        env.update(globals())
-        body = self.cleanup_code(body)
-        stdout = io.StringIO()
-        to_compile = f'async def func():\n{textwrap.indent(body, "  ")}'
         try:
-            exec(to_compile, env)
-        except Exception as e:
-            return await ctx.send(f'```py\n{e.__class__.__name__}: {e}\n```')
-        func = env["func"]
-        try:
-            with redirect_stdout(stdout):
-                ret = await func()
-        except Exception as e:
-            value = stdout.getvalue()
-            await ctx.send(f'```py\n{value}{traceback.format_exc()}\n```')
-        else:
-            value = stdout.getvalue()
+            env = {
+                'bot': self.bot,
+                'ctx': ctx,
+                'channel': ctx.channel,
+                'author': ctx.author,
+                'guild': ctx.guild,
+                'message': ctx.message
+            }
+            env.update(globals())
+            body = self.cleanup_code(body)
+            stdout = io.StringIO()
+            to_compile = f'async def func():\n{textwrap.indent(body, "  ")}'
             try:
-                await ctx.message.add_reaction('\u2705')
-            except:
-                pass
-
-            if ret is None:
-                if value:
-                    await ctx.send(f'```py\n{value}\n```')
+                exec(to_compile, env)
+            except Exception as e:
+                embed = discord.Embed(
+                    title="Error",
+                    description=f"エラーが発生しました。コードを確認してください。\ntraceback:```py\n{e.__class__.__name__}: {e}\n```"
+                )
+                return await ctx.send(f'```py\n{e.__class__.__name__}: {e}\n```')
+            func = env["func"]
+            try:
+                with redirect_stdout(stdout):
+                    ret = await func()
+            except Exception as e:
+                value = stdout.getvalue()
+                embed = discord.Embed(
+                    title="Error",
+                    descriription=f"エラーが発生しました。コードを確認してください。\ntraceback:```py\n{value}{traceback.format_exc()}\n```"
+                )
+                await ctx.send(embed=embed)
             else:
-                self._last_result = ret
-                await ctx.send(f'```py\n{value}{ret}\n```')
+                value = stdout.getvalue()
+                try:
+                    await ctx.message.add_reaction('\u2705')
+                except:
+                    pass
+
+                if ret is None:
+                    if value:
+                        embed = discord.Embed(
+                            title = "Eval Successful",
+                            description = f"実行結果: ```\n{value}\n```"
+                        )
+                        await ctx.send(embed=embed)
+                    else:
+                        embed = discord.Embed(
+                            title = "Eval Successful",
+                            description = "実行結果: `None`"
+                        )
+                        await ctx.send(embed=embed)
+                else:
+                    embed = discord.Embed(
+                        title = "Eval Successful",
+                        description = f"実行結果:```\n{value}{ret}\n```"
+                    )
+                    await ctx.send(embed=embed)
+        except:
+            return print("エラー情報\n" + traceback.format_exc())
 
     @commands.is_owner()
     @commands.command(name="eval")

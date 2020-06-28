@@ -56,8 +56,8 @@ class TODOCog(commands.Cog):
         
         reac, _ = await self.bot.wait_for("reaction_add", check=check)
         if str(reac.emoji) == "👍":
-            if not self.data.get(str(message.author.id)):
-                self.data[str(message.author.id)] = []
+            if not self.bot.data.get(str(message.author.id)):
+                self.bot.data[str(message.author.id)] = []
 
             for todo in todos:
                 self.bot.data[str(message.author.id)].append(todo)
@@ -82,16 +82,17 @@ class TODOCog(commands.Cog):
 
     @commands.command(aliases=["d"])
     async def delete(self, ctx, num: int):
-        l = self.data.get(str(ctx.author.id))
+        l = self.bot.data.get(str(ctx.author.id))
         if not l:
             return await ctx.send("> そのTODOはありません。`todo!list`で確認してください。")
         try:
-            deleted_todo = self.data[str(ctx.author.id)][num]
+            deleted_todo = self.bot.data[str(ctx.author.id)][num]
             del self.bot.data[str(ctx.author.id)][num]
         except IndexError:
             return await ctx.send("> そのTODOはありません。`todo!list`で確認してください。")
         self.bot.save_data()
         return await ctx.send(f"> TODO`{deleted_todo}`の削除に成功しました。")
+    
     @delete.error
     async def error_delete(self, ctx, err):
         if isinstance(err, commands.errors.BadArgument):
