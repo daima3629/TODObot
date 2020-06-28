@@ -128,3 +128,4 @@ class AdminCog(commands.Cog):
 
 def setup(bot):
     bot.add_cog(AdminCog(bot))
+    print("AdminCog loaded")
