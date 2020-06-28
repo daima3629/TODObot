@@ -31,6 +31,16 @@ class TODObot(commands.Bot):
         with open("data.json", "w") as f:
             json.dump(self.data, f, indent=4)
 
+    async def reload(self, ctx):
+        with open("data.json", "r") as f:
+            self.data = json.load(f)
+        for cog in initial_extensions:
+            try:
+                self.load_extension(cog)
+            except Exception as err:
+                err_str = ''.join(traceback.TracebackException.from_exception(err).format())
+                await ctx.send(f"```py\n{err_str}\n```")
+
 if __name__ == "__main__":
     bot = TODObot()
     bot.run(config["TOKEN"])

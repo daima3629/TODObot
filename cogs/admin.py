@@ -119,7 +119,12 @@ class AdminCog(commands.Cog):
         msg = await self.bot.wait_for("message", check=lambda m: m.author==ctx.author and m.channel==ctx.channel)
         return await self.do_eval(ctx, msg.content)
 
-
+    @commands.is_owner()
+    @commands.command()
+    async def reload(self, ctx):
+        async with ctx.typing():
+            await self.bot.reload(ctx)
+        return await ctx.send("> 再ロードが完了しました。")
 
 
 def setup(bot):
