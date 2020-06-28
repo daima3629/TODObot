@@ -36,7 +36,7 @@ class TODObot(commands.Bot):
             self.data = json.load(f)
         for cog in initial_extensions:
             try:
-                self.load_extension(cog)
+                self.reload_extension(cog)
             except Exception as err:
                 err_str = ''.join(traceback.TracebackException.from_exception(err).format())
                 await ctx.send(f"```py\n{err_str}\n```")
