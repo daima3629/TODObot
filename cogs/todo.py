@@ -1,11 +1,24 @@
 import discord
 from discord.ext import commands
 import json
+import hashlib
 
 
 class TODOCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    def make_request(self, ctx, to_user, todo):
+        text = f"{ctx.message.id} - {ctx.author.id} -> {to_user.id}"
+        hashed = hashlib.sha256(text.encode()).hexdigest()
+        data = {
+            "author": ctx.author.id,
+            "to": to_user.id,
+            "content": todo
+        }
+        self.bot.data["request"][hashed[:10]] = data
+        self.bot.save_data()
+        return hashed[:10]
 
     @commands.command(name="help")
     async def _help(self, ctx):
@@ -99,6 +112,46 @@ class TODOCog(commands.Cog):
             return await ctx.send("> 引数は整数で指定してください。")
         if isinstance(err, commands.errors.MissingRequiredArgument):
             return await ctx.send(">>> TODOの番号を引数で指定してください。\n番号は`todo!list`で確認できます。")
+
+    @commands.command()
+    async def request(self, ctx, member: discord.Member, *, todo):
+        text = f"""
+>>> `{str(member)}`さんにtodoリクエストを送ります。
+内容:
+・{todo}
+
+よろしいですか？"""
+        msg = await ctx.send(text)
+        await msg.add_reaction("👍")
+        await msg.add_reaction("👎")
+        def check(reac, user):
+            if not user == ctx.author: return
+            if not reac.message == msg: return
+            if not str(reac.emoji) in ["👍", "👎"]: return
+            return True
+        reac, _ = await self.bot.wait_for("reaction_add", check=check)
+        if str(reac.emoji) == "👎":
+            await msg.delete()
+            return await ctx.send("> todoリクエストをキャンセルしました。", delete_after=5)
+
+        req_id = self.make_request(ctx, member, todo)
+        dm_msg = f"""
+>>> {ctx.author.mention}さんからTODOリクエストが届きました。
+
+内容:
+・{todo}
+
+リクエストID: `{req_id}`
+
+このリクエストを承認する場合は`todo!request_applove {req_id}`
+拒否する場合は`todo!request_deny {req_id}`
+とコマンドを実行してください。"""
+        try:
+            await member.send(dm_msg)
+        except:
+            await ctx.send(f"{member.mention}\n" + dm_msg)
+        
+        #TODO: 取得したIDを送信「受付完了」
 
 
 def setup(bot):
