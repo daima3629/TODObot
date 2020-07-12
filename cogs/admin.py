@@ -58,7 +58,7 @@ class AdminCog(commands.Cog):
                 value = stdout.getvalue()
                 embed = discord.Embed(
                     title="Error",
-                    descriription=f"エラーが発生しました。コードを確認してください。\ntraceback:```py\n{value}{traceback.format_exc()}\n```"
+                    description=f"エラーが発生しました。コードを確認してください。\ntraceback:```py\n{value}{traceback.format_exc()}\n```"
                 )
                 await ctx.send(embed=embed)
             else:

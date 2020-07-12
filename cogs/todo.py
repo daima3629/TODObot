@@ -60,13 +60,14 @@ class TODOCog(commands.Cog):
         msg = await message.channel.send(msg)
         await msg.add_reaction("👍")
         await msg.add_reaction("👎")
+
         def check(reac, user):
             if not user == message.author:
                 return False
             if not str(reac.emoji) in ["👍", "👎"]:
                 return False
             return True
-        
+
         reac, _ = await self.bot.wait_for("reaction_add", check=check)
         if str(reac.emoji) == "👍":
             if not self.bot.data.get(str(message.author.id)):
@@ -105,7 +106,7 @@ class TODOCog(commands.Cog):
             return await ctx.send("> そのTODOはありません。`todo!list`で確認してください。")
         self.bot.save_data()
         return await ctx.send(f"> TODO`{deleted_todo}`の削除に成功しました。")
-    
+
     @delete.error
     async def error_delete(self, ctx, err):
         if isinstance(err, commands.errors.BadArgument):
@@ -124,11 +125,13 @@ class TODOCog(commands.Cog):
         msg = await ctx.send(text)
         await msg.add_reaction("👍")
         await msg.add_reaction("👎")
+
         def check(reac, user):
             if not user == ctx.author: return
             if not reac.message == msg: return
             if not str(reac.emoji) in ["👍", "👎"]: return
             return True
+
         reac, _ = await self.bot.wait_for("reaction_add", check=check)
         if str(reac.emoji) == "👎":
             await msg.delete()
@@ -143,15 +146,40 @@ class TODOCog(commands.Cog):
 
 リクエストID: `{req_id}`
 
-このリクエストを承認する場合は`todo!request_applove {req_id}`
+このリクエストを承認する場合は`todo!request_approve {req_id}`
 拒否する場合は`todo!request_deny {req_id}`
 とコマンドを実行してください。"""
         try:
             await member.send(dm_msg)
         except:
             await ctx.send(f"{member.mention}\n" + dm_msg)
-        
-        #TODO: 取得したIDを送信「受付完了」
+
+        result = f"""
+>>> リクエストの送信に成功しました。
+
+リクエストID: `{req_id}`"""
+        return await ctx.send(result)
+
+    @commands.command()
+    async def request_approve(self, ctx, req_id: str):
+        req_todo = self.bot.data["request"].get(req_id)
+        if not req_id:
+            return await ctx.send("> そのIDのリクエストは存在しません。もう一度確認してください。")
+
+        self.bot.data["todo"][str(ctx.author.id)].append(req_todo.content)
+        del self.bot.data["request"][req_id]
+        self.bot.save_data()
+        return await ctx.send(f"> リクエストを承認しました。\n\n追加されたTODO:\n・{req_todo.content}")
+
+    @commands.command()
+    async def request_deny(self, ctx, req_id: str):
+        req_todo = self.bot.data["request"].get(req_id)
+        if not req_id:
+            return await ctx.send("> そのIDのリクエストは存在しません。もう一度確認してください。")
+
+        del self.bot.data["request"][req_id]
+        self.bot.save_data()
+        return await ctx.send(f"> リクエストを拒否しました。")
 
 
 def setup(bot):
