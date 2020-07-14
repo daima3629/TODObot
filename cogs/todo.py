@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import json
 import hashlib
+import numpy
 
 
 class TODOCog(commands.Cog):
@@ -9,16 +10,15 @@ class TODOCog(commands.Cog):
         self.bot = bot
 
     def make_request(self, ctx, to_user, todo):
-        text = f"{ctx.message.id} - {ctx.author.id} -> {to_user.id}"
-        hashed = hashlib.sha256(text.encode()).hexdigest()
+        req_id = numpy.base_repr(ctx.message.id, 36)
         data = {
             "author": ctx.author.id,
             "to": to_user.id,
             "content": todo
         }
-        self.bot.data["request"][hashed[:10]] = data
+        self.bot.data["request"][req_id] = data
         self.bot.save_data()
-        return hashed[:10]
+        return req_id
 
     @commands.command(name="help")
     async def _help(self, ctx):
