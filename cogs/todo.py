@@ -151,7 +151,7 @@ class TODOCog(commands.Cog):
 とコマンドを実行してください。"""
         try:
             await member.send(dm_msg)
-        except:
+        except discord.Forbidden:
             await ctx.send(f"{member.mention}\n" + dm_msg)
 
         result = f"""
@@ -179,9 +179,9 @@ class TODOCog(commands.Cog):
 
         del self.bot.data["request"][req_id]
         self.bot.save_data()
-        return await ctx.send(f"> リクエストを拒否しました。")
+        return await ctx.send("> リクエストを拒否しました。")
 
 
 def setup(bot):
     bot.add_cog(TODOCog(bot))
-    print("todocog loaded")
+    print("TODOCog loaded")
