@@ -3,18 +3,18 @@ from discord.ext import commands
 import numpy
 import textwrap
 
-
 REACTIONS = ["👍", "👎"]
+
 
 class TODOCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def _make_request(self, ctx, to_user, todo):
+    def _make_request(self, ctx, user_send_to, todo):
         req_id = numpy.base_repr(ctx.message.id, 36)
         data = {
             "author": ctx.author.id,
-            "to": to_user.id,
+            "to": user_send_to.id,
             "content": todo
         }
         self.bot.data["request"][req_id] = data
@@ -125,7 +125,7 @@ class TODOCog(commands.Cog):
     @request.command(aliases=["c"])
     async def create(self, ctx, member: discord.Member, *, todo):
         text = f"""\
-        >>> `{str(member)}`さんにtodoリクエストを送ります。
+        >>> `{member}`さんにtodoリクエストを送ります。
         内容:
         ・{todo}
 
