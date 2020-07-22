@@ -4,6 +4,8 @@ import numpy
 import textwrap
 
 
+REACTIONS = ["👍", "👎"]
+
 class TODOCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -59,18 +61,18 @@ class TODOCog(commands.Cog):
             msg += f"{todo}\n"
         msg += "\nTODOに追加しますか？"
         msg = await message.channel.send(msg)
-        await msg.add_reaction("👍")
-        await msg.add_reaction("👎")
+        await msg.add_reaction(REACTIONS[0])
+        await msg.add_reaction(REACTIONS[1])
 
-        def check(reac, user):
+        def check(reaction, user):
             if not user == message.author:
                 return False
-            if not str(reac.emoji) in ["👍", "👎"]:
+            if not str(reaction.emoji) in REACTIONS:
                 return False
             return True
 
-        reac, _ = await self.bot.wait_for("reaction_add", check=check)
-        if str(reac.emoji) == "👍":
+        reaction, _ = await self.bot.wait_for("reaction_add", check=check)
+        if str(reaction.emoji) == REACTIONS[0]:
             if not self.bot.data.get(str(message.author.id)):
                 self.bot.data[str(message.author.id)] = []
 
@@ -130,17 +132,17 @@ class TODOCog(commands.Cog):
         よろしいですか？
         """
         msg = await ctx.send(textwrap.dedent(text))
-        await msg.add_reaction("👍")
-        await msg.add_reaction("👎")
+        await msg.add_reaction(REACTIONS[0])
+        await msg.add_reaction(REACTIONS[1])
 
         def check(reaction, user):
             if not user == ctx.author: return
             if not reaction.message == msg: return
-            if not str(reaction.emoji) in ["👍", "👎"]: return
+            if not str(reaction.emoji) in REACTIONS: return
             return True
 
         reaction, _ = await self.bot.wait_for("reaction_add", check=check)
-        if str(reaction.emoji) == "👎":
+        if str(reaction.emoji) == REACTIONS[1]:
             await msg.delete()
             return await ctx.send("> todoリクエストをキャンセルしました。", delete_after=5)
 
