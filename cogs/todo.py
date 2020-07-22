@@ -1,15 +1,14 @@
 import discord
 from discord.ext import commands
-import json
-import hashlib
 import numpy
+import textwrap
 
 
 class TODOCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def make_request(self, ctx, to_user, todo):
+    def _make_request(self, ctx, to_user, todo):
         req_id = numpy.base_repr(ctx.message.id, 36)
         data = {
             "author": ctx.author.id,
@@ -22,20 +21,22 @@ class TODOCog(commands.Cog):
 
     @commands.command(name="help")
     async def _help(self, ctx):
-        msg = """
->>> TODO:
-- やること
+        msg = """\
+        >>> TODO:
+        - やること
 
- のようなフォーマットのメッセージを書くと認識して記憶してくれる、ただそれだけのボットです。
- ハイフンの前のスペースが何個でも認識してくれるようになりました。
+        のようなフォーマットのメッセージを書くと認識して記憶してくれる、ただそれだけのボットです。
+        ハイフンの前のスペースが何個でも認識してくれるようになりました。
 
- `todo!list` でTODOのリストが見れます。(alias: `todo!l`)
- `todo!delete TODO番号` でTODOを削除できます。(alias: `todo!d`)
+        `todo!list` でTODOのリストが見れます。(alias: `todo!l`)
+        `todo!delete TODO番号` でTODOを削除できます。(alias: `todo!d`)
 
- **招待リンク**
- https://discord.com/api/oauth2/authorize?client_id=716294656987758702&permissions=67648&scope=bot
- (GitHubにあげるのめんどいのでソースコードは)ないです。"""
-        return await ctx.send(msg)
+        **招待リンク**
+        https://discord.com/api/oauth2/authorize?client_id=716294656987758702&permissions=67648&scope=bot
+        **ソースコード**
+        https://github.com/daima3629/TODObot
+        """
+        return await ctx.send(textwrap.dedent(msg))
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -114,54 +115,62 @@ class TODOCog(commands.Cog):
         if isinstance(err, commands.errors.MissingRequiredArgument):
             return await ctx.send(">>> TODOの番号を引数で指定してください。\n番号は`todo!list`で確認できます。")
 
-    @commands.command()
-    async def request(self, ctx, member: discord.Member, *, todo):
-        text = f"""
->>> `{str(member)}`さんにtodoリクエストを送ります。
-内容:
-・{todo}
+    @commands.group(aliases=["req"])
+    async def request(self, ctx):
+        if not ctx.invoked_subcommand:
+            return await ctx.send("> サブコマンドを指定してください。")
 
-よろしいですか？"""
-        msg = await ctx.send(text)
+    @request.command(aliases=["c"])
+    async def create(self, ctx, member: discord.Member, *, todo):
+        text = f"""\
+        >>> `{str(member)}`さんにtodoリクエストを送ります。
+        内容:
+        ・{todo}
+
+        よろしいですか？
+        """
+        msg = await ctx.send(textwrap.dedent(text))
         await msg.add_reaction("👍")
         await msg.add_reaction("👎")
 
-        def check(reac, user):
+        def check(reaction, user):
             if not user == ctx.author: return
-            if not reac.message == msg: return
-            if not str(reac.emoji) in ["👍", "👎"]: return
+            if not reaction.message == msg: return
+            if not str(reaction.emoji) in ["👍", "👎"]: return
             return True
 
-        reac, _ = await self.bot.wait_for("reaction_add", check=check)
-        if str(reac.emoji) == "👎":
+        reaction, _ = await self.bot.wait_for("reaction_add", check=check)
+        if str(reaction.emoji) == "👎":
             await msg.delete()
             return await ctx.send("> todoリクエストをキャンセルしました。", delete_after=5)
 
-        req_id = self.make_request(ctx, member, todo)
-        dm_msg = f"""
->>> {ctx.author.mention}さんからTODOリクエストが届きました。
+        req_id = self._make_request(ctx, member, todo)
+        dm_msg = f"""\
+        >>> {ctx.author.mention}さんからTODOリクエストが届きました。
 
-内容:
-・{todo}
+        内容:
+        ・{todo}
 
-リクエストID: `{req_id}`
+        リクエストID: `{req_id}`
 
-このリクエストを承認する場合は`todo!request_approve {req_id}`
-拒否する場合は`todo!request_deny {req_id}`
-とコマンドを実行してください。"""
+        このリクエストを承認する場合は`todo!request approve {req_id}`
+        拒否する場合は`todo!request deny {req_id}`
+        とコマンドを実行してください。
+        """
         try:
-            await member.send(dm_msg)
+            await member.send(textwrap.dedent(dm_msg))
         except discord.Forbidden:
-            await ctx.send(f"{member.mention}\n" + dm_msg)
+            await ctx.send(f"{member.mention}\n" + textwrap.dedent(dm_msg))
 
         result = f"""
->>> リクエストの送信に成功しました。
+        >>> リクエストの送信に成功しました。
 
-リクエストID: `{req_id}`"""
-        return await ctx.send(result)
+        リクエストID: `{req_id}`
+        """
+        return await ctx.send(textwrap.dedent(result))
 
-    @commands.command()
-    async def request_approve(self, ctx, req_id: str):
+    @request.command(aliases=["a"])
+    async def approve(self, ctx, req_id: str):
         req_todo = self.bot.data["request"].get(req_id)
         if not req_id:
             return await ctx.send("> そのIDのリクエストは存在しません。もう一度確認してください。")
@@ -171,8 +180,8 @@ class TODOCog(commands.Cog):
         self.bot.save_data()
         return await ctx.send(f"> リクエストを承認しました。\n\n追加されたTODO:\n・{req_todo.content}")
 
-    @commands.command()
-    async def request_deny(self, ctx, req_id: str):
+    @request.command(aliases=["d"])
+    async def deny(self, ctx, req_id: str):
         req_todo = self.bot.data["request"].get(req_id)
         if not req_id:
             return await ctx.send("> そのIDのリクエストは存在しません。もう一度確認してください。")
