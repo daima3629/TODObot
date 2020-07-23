@@ -45,7 +45,7 @@ class TODOCog(commands.Cog):
         if not message.content.startswith("TODO:"):
             return
 
-        s = message.content.split("\n")
+        s = message.content.splitlines()
         if len(s) < 2:
             return
         todos = s[1:]
