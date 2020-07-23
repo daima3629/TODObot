@@ -73,11 +73,11 @@ class TODOCog(commands.Cog):
 
         reaction, _ = await self.bot.wait_for("reaction_add", check=check)
         if str(reaction.emoji) == REACTIONS[0]:
-            if not self.bot.data.get(str(message.author.id)):
-                self.bot.data[str(message.author.id)] = []
+            if not self.bot.data["todo"].get(str(message.author.id)):
+                self.bot.data["todo"][str(message.author.id)] = []
 
             for todo in todos:
-                self.bot.data[str(message.author.id)].append(todo)
+                self.bot.data["todo"][str(message.author.id)].append(todo)
                 self.bot.save_data()
             await message.channel.send(">>> 正常にTODOに追加されました。\n一覧を見るには`todo!list`")
             await msg.delete()
@@ -86,12 +86,12 @@ class TODOCog(commands.Cog):
 
     @commands.command(name="list", aliases=["l"])
     async def _list(self, ctx):
-        l = self.bot.data.get(str(ctx.author.id))
+        todo_list = self.bot.data["todo"].get(str(ctx.author.id))
         todos = ""
-        if not l:
+        if not todo_list:
             return await ctx.send(f">>> {ctx.author.mention}のTODOリスト\n\nNone")
 
-        for i, todo in enumerate(l):
+        for i, todo in enumerate(todo_list):
             todos += f"{i}: {todo}" + "\n"
         todos = todos.rstrip("\n")
         msg = f">>> {ctx.author.mention}のTODOリスト\n\n" + todos
@@ -99,12 +99,12 @@ class TODOCog(commands.Cog):
 
     @commands.command(aliases=["d"])
     async def delete(self, ctx, num: int):
-        l = self.bot.data.get(str(ctx.author.id))
-        if not l:
+        todo_list = self.bot.data["todo"].get(str(ctx.author.id))
+        if not todo_list:
             return await ctx.send("> そのTODOはありません。`todo!list`で確認してください。")
         try:
-            deleted_todo = self.bot.data[str(ctx.author.id)][num]
-            del self.bot.data[str(ctx.author.id)][num]
+            deleted_todo = self.bot.data["todo"][str(ctx.author.id)][num]
+            del self.bot.data["todo"][str(ctx.author.id)][num]
         except IndexError:
             return await ctx.send("> そのTODOはありません。`todo!list`で確認してください。")
         self.bot.save_data()
@@ -124,6 +124,8 @@ class TODOCog(commands.Cog):
 
     @request.command(aliases=["c"])
     async def create(self, ctx, member: discord.Member, *, todo):
+        if not todo:
+            return await ctx.send("> 引数に送りたいTODOを指定してください。")
         text = f"""\
         >>> `{member}`さんにtodoリクエストを送ります。
         内容:
@@ -184,7 +186,6 @@ class TODOCog(commands.Cog):
 
     @request.command(aliases=["d"])
     async def deny(self, ctx, req_id: str):
-        req_todo = self.bot.data["request"].get(req_id)
         if not req_id:
             return await ctx.send("> そのIDのリクエストは存在しません。もう一度確認してください。")
 
