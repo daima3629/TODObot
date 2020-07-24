@@ -178,7 +178,7 @@ class TODOCog(commands.Cog):
     @request.command(aliases=["a"])
     async def approve(self, ctx, req_id: str):
         req_todo = self.bot.data["request"].get(req_id)
-        if not req_id:
+        if not req_todo:
             return await ctx.send("> そのIDのリクエストは存在しません。もう一度確認してください。")
 
         self.bot.data["todo"][str(ctx.author.id)].append(req_todo.content)
