@@ -58,13 +58,13 @@ class TODOCog(commands.Cog):
 
         for i, todo in enumerate(todos):
             todos[i] = todo[2:]
-        msg = f"{message.author.mention}TODOが検出されました。\n\n>>> "
+        confirm_msg_text = f"{message.author.mention}TODOが検出されました。\n\n>>> "
         for todo in todos:
-            msg += f"{todo}\n"
-        msg += "\nTODOに追加しますか？"
-        msg = await message.channel.send(msg)
+            confirm_msg_text += f"{todo}\n"
+        confirm_msg_text += "\nTODOに追加しますか？"
+        confirm_msg = await message.channel.send(confirm_msg_text)
         for reaction in REACTIONS:
-            await msg.add_reaction(reaction)
+            await confirm_msg.add_reaction(reaction)
 
         def check(reaction, user):
             if not user == message.author:
