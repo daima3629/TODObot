@@ -173,8 +173,14 @@ class TODOCog(commands.Cog):
         req_todo = self.bot.data["request"].get(req_id)
         if not req_todo:
             return await ctx.send("> そのIDのリクエストは存在しません。もう一度確認してください。")
-
-        confirm_msg = await ctx.send(f"リクエストを承認しますか？\n\n内容:\n・{req_todo.content}")
+        confirm_msg_text = f"""\
+        リクエストを承認しますか？
+        承認する場合{REACTION_YES}を、拒否する場合{REACTION_NO}を押してください。
+        
+        内容:
+        ・{req_todo.content}
+        """
+        confirm_msg = await ctx.send(textwrap.dedent(confirm_msg_text))
         confirm = await self._wait_reaction(ctx, confirm_msg)
         if not confirm:
             await confirm_msg.delete()
