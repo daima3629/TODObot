@@ -3,9 +3,9 @@ from discord.ext import commands
 import numpy
 import textwrap
 
-REACTIONS = ["👍", "👎"]
 REACTION_YES = "👍"
 REACTION_NO = "👎"
+REACTIONS = [REACTION_YES, REACTION_NO]
 
 
 class TODOCog(commands.Cog):
@@ -22,6 +22,21 @@ class TODOCog(commands.Cog):
         self.bot.data["request"][req_id] = data
         self.bot.save_data()
         return req_id
+
+    async def _wait_reaction(self, ctx, confirm_msg):
+        def check_react(reaction, user):
+            if not user == ctx.author: return
+            if not reaction.message == confirm_msg: return
+            if not str(reaction.emoji) in REACTIONS: return
+            return True
+
+        for reaction in REACTIONS:
+            await confirm_msg.add_reaction(reaction)
+        reaction, _ = await self.bot.wait_for("reaction_add", check=check_react)
+        if str(reaction.emoji) == REACTION_YES:
+            return True
+        else:
+            return False
 
     @commands.command(name="help")
     async def _help(self, ctx):
@@ -63,39 +78,26 @@ class TODOCog(commands.Cog):
             confirm_msg_text += f"{todo}\n"
         confirm_msg_text += "\nTODOに追加しますか？"
         confirm_msg = await message.channel.send(confirm_msg_text)
-        for reaction in REACTIONS:
-            await confirm_msg.add_reaction(reaction)
+        confirm = await self._wait_reaction(ctx, confirm_msg)
+        if not confirm:
+            return await confirm_msg.delete()
 
-        def check(reaction, user):
-            if not user == message.author:
-                return False
-            if not str(reaction.emoji) in REACTIONS:
-                return False
-            return True
+        if str(message.author.id) not in self.bot.data["todo"]:
+            self.bot.data["todo"][str(message.author.id)] = []
 
-        reaction, _ = await self.bot.wait_for("reaction_add", check=check)
-        if str(reaction.emoji) == REACTION_YES:
-            if not self.bot.data["todo"].get(str(message.author.id)):
-                self.bot.data["todo"][str(message.author.id)] = []
-
-            for todo in todos:
-                self.bot.data["todo"][str(message.author.id)].append(todo)
-                self.bot.save_data()
-            await message.channel.send(">>> 正常にTODOに追加されました。\n一覧を見るには`todo!list`")
-            await msg.delete()
-        else:
-            return await msg.delete()
+        for todo in todos:
+            self.bot.data["todo"][str(message.author.id)].append(todo)
+            self.bot.save_data()
+        await message.channel.send(">>> 正常にTODOに追加されました。\n一覧を見るには`todo!list`")
+        await confirm_msg.delete()
 
     @commands.command(name="list", aliases=["l"])
     async def _list(self, ctx):
         todo_list = self.bot.data["todo"].get(str(ctx.author.id))
-        todos = ""
         if not todo_list:
             return await ctx.send(f">>> {ctx.author.mention}のTODOリスト\n\nNone")
 
-        for i, todo in enumerate(todo_list):
-            todos += f"{i}: {todo}" + "\n"
-        todos = todos.rstrip("\n")
+        todos = "\n".join([f"{i}: {todo}" for i, todo in enumerate(todo_list)])
         msg = f">>> {ctx.author.mention}のTODOリスト\n\n" + todos
         return await ctx.send(msg)
 
@@ -136,17 +138,8 @@ class TODOCog(commands.Cog):
         よろしいですか？
         """
         msg = await ctx.send(textwrap.dedent(text))
-        for reaction in REACTIONS:
-            await msg.add_reaction(reaction)
-
-        def check(reaction, user):
-            if not user == ctx.author: return
-            if not reaction.message == msg: return
-            if not str(reaction.emoji) in REACTIONS: return
-            return True
-
-        reaction, _ = await self.bot.wait_for("reaction_add", check=check)
-        if str(reaction.emoji) == REACTION_NO:
+        confirm = await self._wait_reaction(ctx, msg)
+        if not confirm:
             await msg.delete()
             return await ctx.send("> todoリクエストをキャンセルしました。", delete_after=5)
 
@@ -175,25 +168,23 @@ class TODOCog(commands.Cog):
         """
         return await ctx.send(textwrap.dedent(result))
 
-    @request.command(aliases=["a"])
-    async def approve(self, ctx, req_id: str):
+    @request.command(aliases=["r"])
+    async def respond(self, ctx, req_id: str):
         req_todo = self.bot.data["request"].get(req_id)
         if not req_todo:
             return await ctx.send("> そのIDのリクエストは存在しません。もう一度確認してください。")
 
+        confirm_msg = await ctx.send(f"リクエストを承認しますか？\n\n内容:\n・{req_todo.content}")
+        confirm = await self._wait_reaction(ctx, confirm_msg)
+        if not confirm:
+            await confirm_msg.delete()
+            del self.bot.data["request"][req_id]
+            return await ctx.send("> リクエストを拒否しました。")
+
         self.bot.data["todo"][str(ctx.author.id)].append(req_todo.content)
         del self.bot.data["request"][req_id]
         self.bot.save_data()
-        return await ctx.send(f"> リクエストを承認しました。\n\n追加されたTODO:\n・{req_todo.content}")
-
-    @request.command(aliases=["d"])
-    async def deny(self, ctx, req_id: str):
-        if not req_id:
-            return await ctx.send("> そのIDのリクエストは存在しません。もう一度確認してください。")
-
-        del self.bot.data["request"][req_id]
-        self.bot.save_data()
-        return await ctx.send("> リクエストを拒否しました。")
+        return await ctx.send("> リクエストを承認しました。")
 
 
 def setup(bot):
