@@ -12,8 +12,8 @@ with open("config.json", "r") as f:
     config = json.load(f)
 
 class TODObot(commands.Bot):
-    def __init__(self):
-        super().__init__(command_prefix="todo!", help_command=None)
+    def __init__(self, command_prefix, **kwargs):
+        super().__init__(command_prefix, **kwargs)
         for cog in initial_extensions:
             try:
                 self.load_extension(cog)
@@ -42,5 +42,7 @@ class TODObot(commands.Bot):
                 await ctx.send(f"```py\n{err_str}\n```")
 
 if __name__ == "__main__":
-    bot = TODObot()
+    intents = discord.Intents.all()
+    intents.typing = False
+    bot = TODObot(command_prefix=command_prefix, help_command=None, intents=intents)
     bot.run(config["TOKEN"])
