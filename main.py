@@ -44,5 +44,5 @@ class TODObot(commands.Bot):
 if __name__ == "__main__":
     intents = discord.Intents.all()
     intents.typing = False
-    bot = TODObot(command_prefix=command_prefix, help_command=None, intents=intents)
+    bot = TODObot(command_prefix="todo!", help_command=None, intents=intents)
     bot.run(config["TOKEN"])
